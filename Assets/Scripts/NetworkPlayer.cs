@@ -11,6 +11,10 @@ public class NetworkPlayer : NetworkBehaviour
     
     float moveSpeed = 3f;
 
+    [SerializeField] private Transform spawnedObjectPrefab;
+
+    private Transform spawnedObjectTransform;
+
     //private NetworkVariable<int> randomNumber = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner); // can change read/write permissions to allow client to change data
     private NetworkVariable<MyCustomData> randomNumber = new NetworkVariable<MyCustomData>(new MyCustomData
     {
@@ -57,6 +61,8 @@ public class NetworkPlayer : NetworkBehaviour
         transform.position += moveDirection * moveSpeed * Time.deltaTime;
         if (jumpAction.WasPerformedThisFrame())
         {
+            spawnedObjectTransform = Instantiate(spawnedObjectPrefab);
+            spawnedObjectTransform.GetComponent<NetworkObject>().Spawn(true); 
             int randNumValue = Random.Range(0, 10);
             randomNumber.Value = new MyCustomData
             {
@@ -64,15 +70,28 @@ public class NetworkPlayer : NetworkBehaviour
                 _bool = false,
                 message = "I can see you from across the world"
             };
+           
         }
-        //Vector3 moveDir = new Vector3(0, 0, 0);
-
-        //if (Input.GetKey(KeyCode.W)) moveDir.z = +1f;
-        //if (Input.GetKey(KeyCode.S)) moveDir.z = -1f;
-        //if (Input.GetKey(KeyCode.A)) moveDir.x = -1f;
-        //if (Input.GetKey(KeyCode.D)) moveDir.x = +1f;
-
-        //float moveSpeed = 3f;
-        //transform.position += moveDir * moveSpeed * Time.deltaTime;
+        if (randNumAction.WasPerformedThisFrame())
+        {
+            Destroy(spawnedObjectTransform.gameObject);
+        }
+        
+    }
+    [ServerRpc]
+    private void TestServerRpc(string message, ServerRpcParams serverRpcParams) // need to end with ServerRpc in name and be defined inside a NetworkBehaviour
+    {
+        Debug.Log("ServerRpc" + OwnerClientId + ";" + message + ";" + serverRpcParams.Receive.SenderClientId);
+        // using ServerRpc does not run the code on the client, only on the server
+    }
+    [ClientRpc]
+    private void TestClientRpc(ClientRpcParams clientRpcParams)
+    {
+        Debug.Log("ServerRpc" + OwnerClientId);
+        // ClientRpc is called on the server, but then run on the client.
+        // Client cannot call ClientRpc so you can only use on the server
+        // has the same things as ServerRpc besides params
+        // TestClientRpc(new ClientRpcParams { Send = new ClientRpcParams { TargetClientIds = new List<uint> { 1 } });
+        // sends to specific client
     }
 }
